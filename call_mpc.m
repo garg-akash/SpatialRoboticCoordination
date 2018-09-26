@@ -1,4 +1,4 @@
-function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_dest,robo_px,robo_py,critical_x,robo_v_start)
+function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start)
 % n is mpc horizon
 % delt is the time duration of 1 timestep, time for 1 planning horizon
 % n*delt
@@ -8,8 +8,8 @@ function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_dest,ro
 %critical_x contain x coordinates of points where robot and onstacle meet
 %robo_v_start is the velocity of robot at n=1 (start of mpc horizon)
 
-robo_dest_x = robo_dest(1);
-robo_dest_y = robo_dest(2);
+robo_dest_x = robo_px(n);
+robo_dest_y = robo_py(n);
 
 %% Getting current velocity of the robot
 V0x = robo_v_start(1);
@@ -58,7 +58,8 @@ while l < no_of_iter
     %%Constraints
     for i=1:n
         if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
-            robo_py(i) <= Py(i)
+            %robo_py(i) <= Py(i)
+            Py(i) <= obs_py(i); 
         end
     end
     

@@ -1,8 +1,10 @@
 clc;
-clear all;
+clear;
 close all;
 c_1 = [0,3];
 c_2 = [0,-3];
+% c_1 = [-3,4];
+% c_2 = [4,1];
 r = 4;
 total_t = 40;
 avg_vel = 2*pi*r/total_t;
@@ -75,15 +77,30 @@ robo_start  = [Xunit_2(1),Yunit_2(1)];
 robo_end  = [Xunit_2(end),Yunit_2(end)];
 critical_x = [x_inter(1),x_inter(end/2)];
 %extended points are for mpc loop as the robo_dest goes beyond 1xlength(th)
+Xunit_1_ex = Xunit_1;
+Yunit_1_ex = Yunit_1;
+
 Xunit_2_ex = Xunit_2;
 Yunit_2_ex = Yunit_2;
 th_ex = 0:pi/39:pi;
 
+xunit_1_ex = xunit_1;
+yunit_1_ex = yunit_1;
 xunit_2_ex = xunit_2;
 yunit_2_ex = yunit_2;
 for i=2:length(th_ex) %i=1 corresponds to th_ex=0 which is same as th=2*pi
+    xdel_1_ex = avg_vel*(-sin(th_ex(i)))*del_t;
+    ydel_1_ex = avg_vel*(cos(th_ex(i)))*del_t;
+    
     xdel_2_ex = -avg_vel*(-sin(2*pi-th_ex(i)))*del_t; %compared to 1 direction of motion is opposite for 2
     ydel_2_ex = -avg_vel*(cos(2*pi-th_ex(i)))*del_t;
+    
+    xnow_1_ex = xdel_1_ex + xunit_1_ex;
+    ynow_1_ex = ydel_1_ex + yunit_1_ex;
+    xunit_1_ex = xnow_1_ex;
+    yunit_1_ex = ynow_1_ex;
+    Xunit_1_ex = [Xunit_1_ex,xunit_1_ex];
+    Yunit_1_ex = [Yunit_1_ex,yunit_1_ex];
     xnow_2_ex = xdel_2_ex + xunit_2_ex;
     ynow_2_ex = ydel_2_ex + yunit_2_ex;
     xunit_2_ex = xnow_2_ex;
@@ -95,16 +112,16 @@ end
 %del_t = 1.0; % Time duration between two timesteps delt
 n = 12; % n has to be divisible by 4
 robo_v_start = [0,0]; % start velocity of the robo
-robo_dest = [Xunit_2(n),Yunit_2(n)];
+
 robo_traj = [];
 robo_vel = [];
 
 for i = 1:length(th)
 %     [Vx Vy Vz Px Py Pz] = compute_trajectory(robo_start,robo_v_start, [Ox1(i),Oy1(i),Oz1(i)], vel_obs1, [Ox2(i),Oy2(i),Oz2(i)], vel_obs2, [Ox3(i),Oy3(i),Oz3(i)], vel_obs3, dest_location, n, del_t, sense_R, avg_vel);
     
-    [Vx Vy Px Py] = call_mpc(n,del_t,robo_start,robo_dest,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),critical_x,robo_v_start);
+    [Vx Vy Px Py] = call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1),critical_x,robo_v_start);
     robo_start =  [Px(1) Py(1)];
-    robo_dest = [Xunit_2_ex(n+i),Yunit_2_ex(n+i)]; 
+
     robo_v_start = [Vx(1) Vy(1)];
     robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
     robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
