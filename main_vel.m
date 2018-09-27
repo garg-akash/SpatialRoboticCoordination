@@ -1,11 +1,23 @@
 clc;
 clear;
 close all;
-c_1 = [0,3];
-c_2 = [0,-3];
-% c_1 = [-3,4];
-% c_2 = [4,1];
+c_1 = [0;3];
+c_2 = [0;-3];
 r = 4;
+% c_1 = [-3;4];
+% c_2 = [4;1];
+r1 = r;
+r2 = r;
+d2 = sum((c_2-c_1).^2);
+P0 = (c_1+c_2)/2+(r1^2-r2^2)/d2/2*(c_2-c_1);
+t = ((r1+r2)^2-d2)*(d2-(r2-r1)^2);
+if t <= 0
+    fprintf('The circles don''t intersect.\n')
+else
+    T = sqrt(t)/d2/2*[0 -1;1 0]*(c_2-c_1);
+    Pa = P0 - T; % Pa and Pb are circles' intersection points
+    Pb = P0 + T;
+end
 total_t = 40;
 avg_vel = 2*pi*r/total_t;
 
@@ -49,7 +61,7 @@ for i=1:length(th)
     ydel_2 = -avg_vel*(cos(2*pi-th(i)))*del_t;
     xnow_2 = xdel_2 + xunit_2;
     ynow_2 = ydel_2 + yunit_2;
-    Vxunit_2 = [Vxunit_2;-avg_vel*(-sin(2*pi-th(i)))];
+    Vxunit_2 = [Vxunit_2;-avg_vel*(-sin(2*pi-th(i)))]; %Vxunit_2 is used to plot the velocity profile
     Vyunit_2 = [Vyunit_2;-avg_vel*(cos(2*pi-th(i)))];
 end
 figure
@@ -58,24 +70,41 @@ hold on
 poly2 = plot(Xunit_2,Yunit_2);
 % y_d = [Yunit_2(Yunit_2<Yunit_1) Yunit_1(Yunit_1<Yunit_2)]; 
 % plot(Xunit_1,y_d,'k-o')
-x_inter = [Xunit_1(Yunit_2>Yunit_1), fliplr(Xunit_1(Yunit_1<Yunit_2))];
-y_inter1 = [Yunit_2(Yunit_2>Yunit_1)]; 
-y_inter2 = [Yunit_1(Yunit_1<Yunit_2)];
-inBetween = [y_inter1, fliplr(y_inter2)];
-fill(x_inter,inBetween, 'g');
-hold off
-% area_int  = trapz(inBetween)
 
-area_upper = trapz(y_inter1);
-area_below = trapz(abs(y_inter2));
-area_total = area_upper + area_below;
-% polyout = intersect(poly1,poly2)
+critical_trivial_x = [Pa(1),Pb(1)];
+critical_trivial_y = [Pa(2),Pb(2)];
+%find index of values closest to critical points/points of inetrsection
+[ x_ntreq1, x_id1 ] = min( abs( Xunit_1-critical_trivial_x(1) ) );
+[ x_ntreq2, x_id2 ] = min( abs( Xunit_1-critical_trivial_x(2) ) );
+%due to discretization error just extend the bounds by 1 on both the sides
+if x_id1>1
+    x_id1 = x_id1 - 1;
+end
+if x_id2 < length(Xunit_1)
+    x_id2 = x_id2 + 1;
+end
+x_inter1 = Xunit_1(x_id1:x_id2);
+x_inter2 = fliplr(x_inter1);
+x_inter = [x_inter1,x_inter2];
+% y_inter1 = Yunit_1(Xunit_1>=Pa(1) & Xunit_1<=Pb(1)); 
+% y_inter2 = Yunit_2(Xunit_1>=Pa(1) & Xunit_1<=Pb(1));
+% inBetween = [(y_inter1),fliplr(y_inter2)];
+% fill(x_inter,fliplr(inBetween), 'g');
+% hold off
+% % area_int  = trapz(inBetween)
+% 
+% area_upper = trapz(abs(y_inter1));
+% area_below = trapz(y_inter2);
+% area_total = area_upper + area_below;
+% % polyout = intersect(poly1,poly2)
 
+%update the critical points
+critical_x = [x_inter1(1),x_inter1(end)];
 %%Optimize the overlap area
 %Robo is nothing but unit_2
 robo_start  = [Xunit_2(1),Yunit_2(1)];
 robo_end  = [Xunit_2(end),Yunit_2(end)];
-critical_x = [x_inter(1),x_inter(end/2)];
+
 %extended points are for mpc loop as the robo_dest goes beyond 1xlength(th)
 Xunit_1_ex = Xunit_1;
 Yunit_1_ex = Yunit_1;
@@ -112,16 +141,12 @@ end
 %del_t = 1.0; % Time duration between two timesteps delt
 n = 12; % n has to be divisible by 4
 robo_v_start = [0,0]; % start velocity of the robo
-
 robo_traj = [];
 robo_vel = [];
 
 for i = 1:length(th)
-%     [Vx Vy Vz Px Py Pz] = compute_trajectory(robo_start,robo_v_start, [Ox1(i),Oy1(i),Oz1(i)], vel_obs1, [Ox2(i),Oy2(i),Oz2(i)], vel_obs2, [Ox3(i),Oy3(i),Oz3(i)], vel_obs3, dest_location, n, del_t, sense_R, avg_vel);
-    
-    [Vx Vy Px Py] = call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1),critical_x,robo_v_start);
+    [Vx, Vy, Px, Py] = call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1),critical_x,robo_v_start);
     robo_start =  [Px(1) Py(1)];
-
     robo_v_start = [Vx(1) Vy(1)];
     robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
     robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
