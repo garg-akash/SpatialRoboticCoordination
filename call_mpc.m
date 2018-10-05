@@ -1,5 +1,5 @@
 %To generate fig: min_dist_to_obst&goal.fig
-function[vx_out, vy_out, x_out, y_out] = hmm_call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start,id_1,id_2)
+function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start,id_1,id_2)
 % n is mpc horizon
 % delt is the time duration of 1 timestep, time for 1 planning horizon
 % n*delt
