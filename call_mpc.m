@@ -1,4 +1,5 @@
-function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start)
+%To generate fig: min_dist_to_obst&goal.fig
+function[vx_out, vy_out, x_out, y_out] = hmm_call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start,id_1,id_2)
 % n is mpc horizon
 % delt is the time duration of 1 timestep, time for 1 planning horizon
 % n*delt
@@ -18,16 +19,6 @@ V0y = robo_v_start(2);
 %% Amount of change in velocity allowed
 del_Vx= 1*delt;
 del_Vy= 1*delt;
-
-%% Determining intermediate destination points
-robo_p3xby4 = robo_px(3*n/4);
-robo_p3yby4 = robo_py(3*n/4);
-
-robo_p2xby4 = robo_px(2*n/4);
-robo_p2yby4 = robo_py(2*n/4);
-
-robo_pxby4 = robo_px(n/4);
-robo_pyby4 = robo_py(n/4);
 
 %% Saving cvx_optval
 optval_mat = 0;
@@ -49,19 +40,28 @@ while l < no_of_iter
     end
 
     %%Cost function
-    cost = (Px(n) - robo_dest_x)^2 + (Py(n) - robo_dest_y)^2;
-    cost = cost + (Px(3*n/4) - robo_px(3*n/4))^2 + (Py(3*n/4) - robo_py(3*n/4))^2;
-    cost = cost + (Px(n/2) - robo_px(2*n/4))^2 + (Py(n/2) - robo_py(2*n/4))^2;    
-    cost = cost + (Px(n/4) - robo_px(n/4))^2 + (Py(n/4) - robo_py(n/4))^2 ;
+    cost = 0;
+    for i=1:n
+        if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
+            cost = cost + (Px(i) - robo_px(i))^2 + (Py(i) - obs_py(i))^2; %obs_px=robo_px
+        end
+        if(robo_px(i)>critical_x(2))
+            cost = cost + (Px(i) - robo_px(i))^2 + (Py(i) - robo_py(i))^2;
+        end
+    end 
+%     cost = (Px(n) - robo_dest_x)^2 + (Py(n) - robo_dest_y)^2;
+%     cost = cost + (Px(3*n/4) - robo_px(3*n/4))^2 + (Py(3*n/4) - robo_py(3*n/4))^2;
+%     cost = cost + (Px(n/2) - robo_px(2*n/4))^2 + (Py(n/2) - robo_py(2*n/4))^2;    
+%     cost = cost + (Px(n/4) - robo_px(n/4))^2 + (Py(n/4) - robo_py(n/4))^2 ;
     minimise(cost);
     
     %%Constraints
-    for i=1:n
-        if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
-            robo_py(i) <= Py(i)
-%             Py(i) <= obs_py(i); 
-        end
-    end
+%     for i=1:n
+%         if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
+%             robo_py(i) <= Py(i)
+% %             Py(i) <= obs_py(i); 
+%         end
+%     end
     
     %% The velocity during initialization shouldn't be much higher
     V0x-del_Vx <= Vx(1) <= V0x + del_Vx;
