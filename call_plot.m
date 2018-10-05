@@ -1,4 +1,4 @@
-function[] = call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2)
+function[] = call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2,w1,w2)
 
 figure
 subplot(2,2,1)
@@ -7,7 +7,7 @@ hold on
 plot(Xunit_2,Yunit_2);
 plot(Xunit_1,Yunit_1);
 title('Trjaectory Plot')
-legend('Optimized Trajectroty','Initial Trajectroty','Obstacle Trajectroty')
+legend(sprintf('W1 = %f & W2 = %f', w1, w2),'Initial Trajectroty','Obstacle Trajectroty')
 hold off
 
 subplot(2,2,2)

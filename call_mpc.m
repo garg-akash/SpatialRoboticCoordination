@@ -1,5 +1,4 @@
-%To generate fig: min_dist_to_obst&goal.fig
-function[vx_out, vy_out, x_out, y_out] = hmm_call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start,id_1,id_2)
+function[vx_out, vy_out, x_out, y_out] = call_mpc(n,delt,robo_start,robo_px,robo_py,obs_py,critical_x,robo_v_start,id_1,id_2,id_count,w1,w2)
 % n is mpc horizon
 % delt is the time duration of 1 timestep, time for 1 planning horizon
 % n*delt
@@ -8,9 +7,6 @@ function[vx_out, vy_out, x_out, y_out] = hmm_call_mpc(n,delt,robo_start,robo_px,
 %robo_px,py are the inital x y coord of robots from current to n steps ahead
 %critical_x contain x coordinates of points where robot and onstacle meet
 %robo_v_start is the velocity of robot at n=1 (start of mpc horizon)
-
-robo_dest_x = robo_px(n);
-robo_dest_y = robo_py(n);
 
 %% Getting current velocity of the robot
 V0x = robo_v_start(1);
@@ -40,29 +36,43 @@ while l < no_of_iter
     end
 
     %%Cost function
-    cost = 0;
+    cost_2 = 0; 
+    flag = zeros(1,n);
+    %id_count prevents setting flag to 1 in interval of extended path
     for i=1:n
-        if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
-            cost = cost + (Px(i) - robo_px(i))^2 + (Py(i) - obs_py(i))^2; %obs_px=robo_px
-        end
-        if(robo_px(i)>critical_x(2))
-            cost = cost + (Px(i) - robo_px(i))^2 + (Py(i) - robo_py(i))^2;
+        if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2) && id_count<id_2) %This will not work for generic cases
+            flag(i) = 1;
         end
     end 
-%     cost = (Px(n) - robo_dest_x)^2 + (Py(n) - robo_dest_y)^2;
-%     cost = cost + (Px(3*n/4) - robo_px(3*n/4))^2 + (Py(3*n/4) - robo_py(3*n/4))^2;
-%     cost = cost + (Px(n/2) - robo_px(2*n/4))^2 + (Py(n/2) - robo_py(2*n/4))^2;    
-%     cost = cost + (Px(n/4) - robo_px(n/4))^2 + (Py(n/4) - robo_py(n/4))^2 ;
-    minimise(cost);
+    %I need to consider area from start_id to end_id for the present horizon 
+
+    cost = (Px(n) - robo_px(n))^2 + (Py(n) - robo_py(n))^2;
+    cost = cost + (Px(3*n/4) - robo_px(3*n/4))^2 + (Py(3*n/4) - robo_py(3*n/4))^2;
+    cost = cost + (Px(n/2) - robo_px(2*n/4))^2 + (Py(n/2) - robo_py(2*n/4))^2;    
+    cost = cost + (Px(n/4) - robo_px(n/4))^2 + (Py(n/4) - robo_py(n/4))^2 ;
+%     minimise(cost);
+
+    start_id = min(find(flag));
+    end_id = max(find(flag));
+    disp(flag)
+    disp(start_id)
+    disp(end_id)
+    disp(id_count)
+%     area_obs = trapz(robo_px(start_id:end_id),obs_py(start_id:end_id));
+%     area_init = trapz(robo_px(start_id:end_id),robo_py(start_id:end_id));
+%     disp(area_init)
+%     area_opt = trapz(robo_px(start_id:end_id),Py(start_id:end_id));
+%     disp(area_opt)
+%     -area_init <= -area_opt;
+%     area_opt <= area_init;
+
+%     sum(Py(start_id:end_id)) <= sum(robo_py(start_id:end_id));
+    cost_2 = sum(Py(start_id:end_id)) - sum(robo_py(start_id:end_id));
     
+    cost_total = w1*cost + w2*cost_2;
+    minimise(cost_total)
+        
     %%Constraints
-%     for i=1:n
-%         if(robo_px(i)>critical_x(1) && robo_px(i)<critical_x(2)) %This will not work for generic cases
-%             robo_py(i) <= Py(i)
-% %             Py(i) <= obs_py(i); 
-%         end
-%     end
-    
     %% The velocity during initialization shouldn't be much higher
     V0x-del_Vx <= Vx(1) <= V0x + del_Vx;
     V0y-del_Vy <= Vy(1) <= V0y + del_Vy;

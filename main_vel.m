@@ -1,6 +1,7 @@
+
 clc;
 clear;
-close all;
+%close all;
 c_1 = [0;3];
 c_2 = [0;-3];
 r = 4;
@@ -86,20 +87,11 @@ end
 x_inter1 = Xunit_1(x_id1:x_id2);
 x_inter2 = fliplr(x_inter1);
 x_inter = [x_inter1,x_inter2];
-% y_inter1 = Yunit_1(Xunit_1>=Pa(1) & Xunit_1<=Pb(1)); 
-% y_inter2 = Yunit_2(Xunit_1>=Pa(1) & Xunit_1<=Pb(1));
-% inBetween = [(y_inter1),fliplr(y_inter2)];
-% fill(x_inter,fliplr(inBetween), 'g');
-% hold off
-% % area_int  = trapz(inBetween)
-% 
-% area_upper = trapz(abs(y_inter1));
-% area_below = trapz(y_inter2);
-% area_total = area_upper + area_below;
-% % polyout = intersect(poly1,poly2)
+
 
 %update the critical points
 critical_x = [x_inter1(1),x_inter1(end)];
+critical_y = [Yunit_2(x_id1),Yunit_2(x_id2)];
 %%Optimize the overlap area
 %Robo is nothing but unit_2
 robo_start  = [Xunit_2(1),Yunit_2(1)];
@@ -140,16 +132,21 @@ end
 
 %del_t = 1.0; % Time duration between two timesteps delt
 n = 12; % n has to be divisible by 4
+w1 = 0.2; %Weights for cost
+w2 = 0.8;
+x_id_count = 1;
 robo_v_start = [0,0]; % start velocity of the robo
 robo_traj = [];
 robo_vel = [];
 
 for i = 1:length(th)
-    [Vx, Vy, Px, Py] = call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1),critical_x,robo_v_start);
+    [Vx, Vy, Px, Py] = call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1) ...
+                        ,Yunit_1_ex(i:n+i-1),critical_x,robo_v_start,x_id1,x_id2,x_id_count,w1,w2);
     robo_start =  [Px(1) Py(1)];
     robo_v_start = [Vx(1) Vy(1)];
     robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
     robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
+    x_id_count = x_id_count + 1;
 end
 
-call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2);
+call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2,w1,w2);
