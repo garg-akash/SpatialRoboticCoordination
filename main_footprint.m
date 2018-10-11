@@ -28,6 +28,7 @@ Yunit_1=[];
 Hfinal_1=[];
 Xunit_2=[];
 Yunit_2=[];
+Hfinal_2=[];
 Vxunit_2=[];
 Vyunit_2=[];
 xnow_1 = c_1(1)-r;
@@ -47,6 +48,8 @@ for i=1:length(th)
     yunit_2 = ynow_2;
     Xunit_2 = [Xunit_2,xunit_2];
     Yunit_2 = [Yunit_2,yunit_2];
+    hfinal_2 = th(i) + hinit_2;
+    Hfinal_2 = [Hfinal_2,hfinal_2];
     
     xdel_1 = avg_vel*(-sin(th(i)))*del_t;
     ydel_1 = avg_vel*(cos(th(i)))*del_t;
@@ -63,7 +66,8 @@ end
 
 %% plot the initial trjectories 
 % cal_initTraj_plot(Xunit_1,Xunit_2,Yunit_1,Yunit_2,th,hinit_1,hinit_2,l_1,b_1,l_2,b_2)
-call_sim(Xunit_1,Xunit_2,Yunit_1,Yunit_2,th,hinit_1,hinit_2,l_1,b_1,l_2,b_2);
+% call_sim(Xunit_1,Xunit_2,Yunit_1,Yunit_2,th,hinit_1,hinit_2,l_1,b_1,l_2,b_2);
+
 % figure
 % poly1 = plot(Xunit_1,Yunit_1);
 % hold on
@@ -95,6 +99,7 @@ Hfinal_1_ex = Hfinal_1;
 
 Xunit_2_ex = Xunit_2;
 Yunit_2_ex = Yunit_2;
+Hfinal_2_ex = Hfinal_2;
 th_ex = 0:pi/39:pi;
 
 xunit_1_ex = xunit_1;
@@ -121,6 +126,7 @@ for i=2:length(th_ex) %i=1 corresponds to th_ex=0 which is same as th=2*pi
     yunit_2_ex = ynow_2_ex;
     Xunit_2_ex = [Xunit_2_ex,xunit_2_ex];
     Yunit_2_ex = [Yunit_2_ex,yunit_2_ex];
+    Hfinal_2_ex = [Hfinal_2_ex,(th_ex(i) + hinit_2)];
 end
 
 %del_t = 1.0; % Time duration between two timesteps delt
@@ -131,15 +137,15 @@ robo_traj = [];
 robo_vel = [];
 robo_t = [];
 
-% for i = 1:length(th)
-%     [Vx Vy Px Py t] = footprint_call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1) ...
-%                    ,robo_v_start,robo_t_start,l_1,b_1,Hfinal_1_ex(i:n+i-1),l_2,b_2,hinit_2);
-%     robo_start =  [Px(1) Py(1)];
-%     robo_v_start = [Vx(1) Vy(1)];
-%     robo_t_start = t(1);
-%     robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
-%     robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
-%     robo_t = [robo_t;robo_t_start];
-% end
+for i = 1:length(th)
+    [Vx Vy Px Py t] = footprint_call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1) ...
+                   ,robo_v_start,robo_t_start,l_1,b_1,Hfinal_1_ex(i:n+i-1),l_2,b_2,hinit_2,Hfinal_2_ex(i:n+i-1));
+    robo_start =  [Px(1) Py(1)];
+    robo_v_start = [Vx(1) Vy(1)];
+    robo_t_start = t(1);
+    robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
+    robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
+    robo_t = [robo_t;robo_t_start];
+end
 % 
 % call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2);
