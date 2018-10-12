@@ -1,4 +1,4 @@
-function[vx_out, vy_out, x_out, y_out, t_out] = footprint_call_mpc(n,delt,robo_start,robo_px,robo_py ...
+function[vx_out, vy_out, x_out, y_out, tf_out] = footprint_call_mpc(n,delt,robo_start,robo_px,robo_py ...
                                                 ,obs_py,robo_v_start,robo_t_start,l_1,b_1,hf_1,l_2,b_2,hinit_2,hf_2)
 % n is mpc horizon
 % delt is the time duration of 1 timestep, time for 1 planning horizon
@@ -8,17 +8,18 @@ function[vx_out, vy_out, x_out, y_out, t_out] = footprint_call_mpc(n,delt,robo_s
 %robo_px,py are the inital x y coord of robots from current to n steps ahead
 %critical_x contain x coordinates of points where robot and onstacle meet
 %robo_v_start is the velocity of robot at n=1 (start of mpc horizon)
+%robo_t_start is the value of previous final heading of the robot
 %hf_1, hf_2 are the final headings of the obstacle and robot resp.
 %% Getting current velocity & theta of the robot
 V0x = robo_v_start(1);
 V0y = robo_v_start(2);
-t0 = robo_t_start;
+tf0 = robo_t_start;
 
 %% Amount of change in velocity & theta allowed
 %delt for now is 0.5
 del_Vx = 1*delt;
 del_Vy = 1*delt;
-del_th = (1/5)*delt;
+del_tf = (1/5)*delt;
 
 %% Saving cvx_optval
 optval_mat = 0;
@@ -38,7 +39,7 @@ while l < no_of_iter
     for i = 1:n
         Px(i)  =  sum(Vx(1:i))*delt + robo_start(1);
         Py(i)  =  sum(Vy(1:i))*delt + robo_start(2);
-        %tfinal(i) = t(i) + hinit_2;
+        tfinal(i) = t(i) + hinit_2;
     end
 
     %%Cost function
@@ -51,6 +52,7 @@ while l < no_of_iter
 %     cost1 = kt*(Pt(n) - robot_dest_t) + bt
 %     cost1 = (t(n) - robo_dest_t)^2;
     cost2 = 0;
+    cost3 = 0;
     for i=1:n
         [AG_1,BG_1,CG_1,DG_1] = rectangle_plot(l_1,b_1,hf_1(i),robo_px(i),obs_py(i));
         [AG_2,BG_2,CG_2,DG_2] = rectangle_plot(l_2,b_2,hf_2(i),robo_px(i),robo_py(i));
@@ -58,13 +60,15 @@ while l < no_of_iter
         Poly_2 = [AG_2;BG_2;CG_2;DG_2;AG_2];
         [xa,ya] = polybool('intersection',Poly_1(:,1),Poly_1(:,2),Poly_2(:,1),Poly_2(:,2));
         ar = polyarea(xa,ya);
-%         wt = (Py(i) - robo_py(i))/(obs_py(i) - robo_py(i));
-%         wt = (Py(i) - robo_py(i))/(robo_py(i) - obs_py(i));
-        wt = (Py(i) - robo_py(i))/abs((obs_py(i) - robo_py(i)));
-
+        %Use wt for strangeFig_1 for generic cases (see explanation in register)
+        wt = (Py(i) - robo_py(i))/(obs_py(i) - robo_py(i)); %StrangeFig_1 
+%         wt = (Py(i) - robo_py(i))/(robo_py(i) - obs_py(i)); %StrangeFig_2
+%         wt = (Py(i) - robo_py(i))/abs((obs_py(i) - robo_py(i))); %StrangeFig_3
+        
         cost2 = cost2 + wt*ar;
+        cost3 = cost3 + abs(tfinal(i)-hf_2(i));
     end
-    cost = cost1 + cost2;
+    cost = cost1 + cost2 + cost3;
 
     minimise(cost);
     
@@ -91,7 +95,7 @@ while l < no_of_iter
     V0x-del_Vx <= Vx(1) <= V0x + del_Vx;
     V0y-del_Vy <= Vy(1) <= V0y + del_Vy;
     
-    t0 - del_th <= t(1) <= t0 + del_th;
+    tf0 - del_tf <= tfinal(1) <= tf0 + del_tf;
     
     %% Ensuring that subsequent X vel commands do not have difference more than del_Vx
     -del_Vx <= Vx(2:n) - Vx(1:n-1) <= del_Vx;
@@ -100,7 +104,7 @@ while l < no_of_iter
     -del_Vy <= Vy(2:n) - Vy(1:n-1) <= del_Vy;
     
     %% Ensuring that subsequent theta commands do not have difference more than del_th
-    -del_th <= t(2:n) - t(1:n-1) <= del_th;
+    -del_tf <= tfinal(2:n) - tfinal(1:n-1) <= del_tf;
     cvx_end
     td = t; %Linearization points
     flag = 1;
@@ -108,9 +112,9 @@ while l < no_of_iter
     y_out = Py;
     vx_out = Vx;
     vy_out = Vy;
-    t_out = t;
+    tf_out = tfinal;
     
-    clear Vx Vy Px Py t
+    clear Vx Vy Px Py t tfinal
     l = l + 1;
     if l ~= 0
         q;

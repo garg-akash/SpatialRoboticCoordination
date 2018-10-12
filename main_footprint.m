@@ -132,20 +132,23 @@ end
 %del_t = 1.0; % Time duration between two timesteps delt
 n = 12; % n has to be divisible by 4
 robo_v_start = [0,0]; % start velocity of the robo
-robo_t_start = th(1);
+robo_t_start = th(1)+hinit_2;
 robo_traj = [];
 robo_vel = [];
 robo_t = [];
 
 for i = 1:length(th)
-    [Vx Vy Px Py t] = footprint_call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1) ...
+    [Vx Vy Px Py tfinal] = footprint_call_mpc(n,del_t,robo_start,Xunit_2_ex(i:n+i-1),Yunit_2_ex(i:n+i-1),Yunit_1_ex(i:n+i-1) ...
                    ,robo_v_start,robo_t_start,l_1,b_1,Hfinal_1_ex(i:n+i-1),l_2,b_2,hinit_2,Hfinal_2_ex(i:n+i-1));
     robo_start =  [Px(1) Py(1)];
     robo_v_start = [Vx(1) Vy(1)];
-    robo_t_start = t(1);
+    robo_t_start = tfinal(1);
     robo_traj = [robo_traj;robo_start]; %stores the optimized trajectory of the robot 
     robo_vel = [robo_vel;robo_v_start]; %stores the optimized velocity of the robot
     robo_t = [robo_t;robo_t_start];
 end
-% 
-% call_plot(robo_traj,Xunit_1,Yunit_1,Xunit_2,Yunit_2,robo_vel,Vxunit_2,Vyunit_2);
+tidk = atan2(robo_vel(:,2),robo_vel(:,1));
+%Heading of robot is tidk but we send -tidk bcoz in rectangle_plot we send
+%-ve. So -(-) becomes +ve
+cal_finalTraj_plot(Xunit_1,Yunit_1,Yunit_2,robo_traj',th,hinit_1,-tidk,l_1,b_1,l_2,b_2)
+% cal_finalTraj_plot(Xunit_1,Yunit_1,Yunit_2,robo_traj',th,hinit_1,robo_t,l_1,b_1,l_2,b_2)
